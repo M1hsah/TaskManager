@@ -4,21 +4,32 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"database/sql"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type application struct {
+	DB *sql.DB
+}
+
 type healthResponse struct {
 	Status string `json:"status"`
 }
 
 type projectsResponse struct {
-	Message string `json:"message"`
+	Projects []project `json:"projects"`
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
+type project struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+func (app *application) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	response := healthResponse{Status: "ok"}
 
@@ -26,9 +37,34 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func projectsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) projectsHandler(w http.ResponseWriter, r *http.Request) {
+	// Query the database to fetch projects
+	rows, err := app.DB.Query("SELECT id, name, created_at FROM projects")
+	if err != nil {
+		http.Error(w, "Failed to fetch projects", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	// Map the rows to the projects slice
+	projects := []project{}
+	for rows.Next() {
+		var p project
+		err = rows.Scan(&p.ID, &p.Name, &p.CreatedAt)
+		if err != nil {
+			http.Error(w, "Failed to scan project", http.StatusInternalServerError)
+			return
+		}
+		projects = append(projects, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		http.Error(w, "Error iterating over projects", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	response := projectsResponse{Message: "Not implemented yet"}
+	response := projectsResponse{Projects: projects}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -47,8 +83,9 @@ func main() {
 		log.Fatalf("Failed to ping the database: %v", err)
 	}
 
+	app := &application{DB: db}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", healthHandler)
-	mux.HandleFunc("GET /projects", projectsHandler)
+	mux.HandleFunc("GET /health", app.healthHandler)
+	mux.HandleFunc("GET /projects", app.projectsHandler)
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
