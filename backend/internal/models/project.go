@@ -31,6 +31,19 @@ func (m *ProjectModel) Insert(name string) (Project, error) {
 	return p, nil
 }
 
+func (m *ProjectModel) Update(name string, id int) (Project, error) {
+	var p Project
+	err := m.DB.QueryRow("UPDATE projects SET name = $1 WHERE id = $2 RETURNING id, name, created_at", name, id).Scan(&p.ID, &p.Name, &p.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Project{}, ErrNoRecord
+	}
+	if err != nil {
+		return Project{}, err
+	}
+
+	return p, nil
+}
+
 func (m *ProjectModel) Get(id int) (Project, error) {
 	var p Project
 	err := m.DB.QueryRow("SELECT id, name, created_at FROM projects WHERE id = $1", id).Scan(&p.ID, &p.Name, &p.CreatedAt)
