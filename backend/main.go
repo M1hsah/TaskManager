@@ -34,7 +34,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", app.healthHandler)
-	mux.HandleFunc("GET /projects", app.projectsHandler)
+	mux.HandleFunc("GET /projects", app.getProjectsHandler)
+	mux.HandleFunc("GET /projects/{id}", app.getProjectHandler)
 	mux.HandleFunc("POST /projects", app.createProjectHandler)
+	mux.HandleFunc("DELETE /projects/{id}", app.deleteProjectHandler)
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
