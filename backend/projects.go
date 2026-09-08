@@ -9,10 +9,6 @@ import (
 	"taskmanager/internal/models"
 )
 
-type healthResponse struct {
-	Status string `json:"status"`
-}
-
 type getProjectResponse struct {
 	Project models.Project `json:"project"`
 }
@@ -21,16 +17,8 @@ type getProjectsResponse struct {
 	Projects []models.Project `json:"projects"`
 }
 
-type createProjectInput struct {
+type createProjectRequest struct {
 	Name string `json:"name"`
-}
-
-func (app *application) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	response := healthResponse{Status: "ok"}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
 }
 
 func (app *application) getProjectsHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +77,7 @@ func (app *application) deleteProjectHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *application) createProjectHandler(w http.ResponseWriter, r *http.Request) {
-	var input createProjectInput
+	var input createProjectRequest
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		http.Error(w, "Error: Invalid request body", http.StatusBadRequest)
@@ -113,7 +101,7 @@ func (app *application) createProjectHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *application) updateProjectHandler(w http.ResponseWriter, r *http.Request) {
-	var input createProjectInput
+	var input createProjectRequest
 	id := r.PathValue("id")
 	parsedId, err := strconv.Atoi(id)
 	if err != nil {
